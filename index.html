@@ -2092,7 +2092,7 @@
       <div style=font-size:36px;color:#63c4ff>✦</div>
       <div class=eyebrow>ROTANDARO · LOCAL</div>
       <h1>Gestão com propósito.</h1>
-      <p class=sub>Banco de dados local no seu navegador. Sem servidor.</p>
+      <p class=sub>Banco de dados online seguro · vários usuários · acesso de qualquer dispositivo.</p>
       <div id=notice class="notice hidden"></div>
       <div class=fields style=margin-top:18px>
         <div class=field><label>USUÁRIO</label><input id=lu class=input></div>
@@ -2194,7 +2194,7 @@
       <div class="card tablecard">
         <div class=tablehead>
           <div>
-            <h2>Lançamentos</h2><span class=sub>Armazenados no banco local IndexedDB.</span>
+            <h2>Lançamentos</h2><span class=sub>Armazenados no banco online por usuário.</span>
           </div><span id=count class=badge>0 itens</span>
         </div>
         <div class=tablewrap>
@@ -2391,7 +2391,7 @@
         </div>
       </div>
     </section>
-    <div class=footer>ROTANDARO · IndexedDB · armazenamento local</div>
+    <div class=footer>ROTANDARO · Supabase · banco online multiusuário</div>
   </div>
   <div id=calc class="modal hidden">
     <div class=modalbox>
@@ -2462,7 +2462,235 @@
     </div>
   </div>
   <div id=toast class=toast></div>
-  <script>const DB = "SacredLuxuryDB", VER = 1; let db, user, records = [], registering = !1; const $ = e => document.getElementById(e), money = e => Number(e || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 }); function parseMoney(e) { return (e = String(e || "").trim().replace(/\s/g, "")) ? (e.includes(",") && (e = e.replace(/\./g, "").replace(",", ".")), Number(e) || 0) : 0 } function formatBlur(e) { const t = parseMoney(e.value); e.value = t ? t.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "" } function esc(e) { return String(e ?? "").replace(/[&<>"']/g, (e => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[e]))) } function dateBR(e) { return e.split("-").reverse().join("/") } function toast(e) { const t = $("toast"); t.textContent = e, t.style.opacity = 1, clearTimeout(window.to), window.to = setTimeout((() => t.style.opacity = 0), 2200) } function openDB() { return new Promise(((e, t) => { const n = indexedDB.open(DB, 1); n.onupgradeneeded = () => { const e = n.result; if (e.objectStoreNames.contains("users") || e.createObjectStore("users", { keyPath: "id", autoIncrement: !0 }), !e.objectStoreNames.contains("contributions")) { e.createObjectStore("contributions", { keyPath: "id", autoIncrement: !0 }).createIndex("userId", "userId") } }, n.onsuccess = () => { db = n.result, e() }, n.onerror = () => t(n.error) })) } function tx(e, t = "readonly") { return db.transaction(e, t).objectStore(e) } function getAll(e) { return new Promise(((t, n) => { const o = tx(e).getAll(); o.onsuccess = () => t(o.result), o.onerror = () => n(o.error) })) } function add(e, t) { return new Promise(((n, o) => { const r = tx(e, "readwrite").add(t); r.onsuccess = () => n(r.result), r.onerror = () => o(r.error) })) } function del(e, t) { return new Promise(((n, o) => { const r = tx(e, "readwrite").delete(t); r.onsuccess = () => n(), r.onerror = () => o(r.error) })) } function clearStore(e, t) { return new Promise(((n, o) => { const r = db.transaction(e, "readwrite"), a = r.objectStore(e), i = a.getAll(); i.onsuccess = () => { i.result.filter((e => e.userId === t)).forEach((e => a.delete(e.id))) }, r.oncomplete = () => n(), r.onerror = () => o(r.error) })) } async function init() { await openDB(); (await getAll("users")).length ? $("notice").classList.add("hidden") : (registering = !0, $("notice").classList.remove("hidden"), $("notice").textContent = "Primeiro acesso: crie sua conta.", $("loginBtn").textContent = "Criar conta") } function toggleReg() { registering = !registering, $("loginBtn").textContent = registering ? "Criar conta" : "Entrar", $("regBtn").textContent = registering ? "Voltar ao login" : "Criar conta", $("notice").classList.toggle("hidden", !registering), $("loginErr").textContent = "" } async function login() { const e = $("lu").value.trim(), t = $("lp").value; if (e.length < 3 || t.length < 6) $("loginErr").textContent = "Usuário mínimo 3 caracteres e senha mínima 6."; else try { const n = (await getAll("users")).find((t => t.username === e)); if (registering) { if (n) throw Error("Usuário já existe."); const o = await add("users", { username: e, password: btoa(unescape(encodeURIComponent(t))), createdAt: (new Date).toISOString() }); user = { id: o, username: e } } else { if (!n || n.password !== btoa(unescape(encodeURIComponent(t)))) throw Error("Usuário ou senha incorretos."); user = n } localStorage.setItem("sacredUser", JSON.stringify({ id: user.id, username: user.username })), show() } catch (e) { $("loginErr").textContent = e.message } } async function auto() { const e = JSON.parse(localStorage.getItem("sacredUser") || "null"); if (e) { const t = (await getAll("users")).find((t => t.id === e.id)); if (t) return user = t, void show() } $("login").classList.remove("hidden") } async function show() { $("login").classList.add("hidden"), $("app").classList.remove("hidden"), $("uname").textContent = user.username, await load() } function logout() { localStorage.removeItem("sacredUser"), location.reload() } async function load() { const e = await getAll("contributions"); records = e.filter((e => e.userId === user.id)).sort(((e, t) => t.date.localeCompare(e.date) || t.id - e.id)), populate(), render() } function page(e, t) { document.querySelectorAll(".nav button").forEach((e => e.classList.remove("active"))), t.classList.add("active"), document.querySelectorAll(".page").forEach((e => e.classList.remove("active"))), $(e).classList.add("active"), "reports" === e && reports() } function openCalc() { $("calc").classList.remove("hidden"), calculate() } function openEntry() { $("entry").classList.remove("hidden"), $("ed").value = (new Date).toISOString().slice(0, 10) } function closeM(e) { $(e).classList.add("hidden") } function calculate() { const e = parseMoney($("ci").value), t = +$("cp").value || 0, n = +$("cf").value || 0, o = e * t / 100, r = e * n / 100; return $("cd").textContent = money(o), $("cfv").textContent = money(r), $("ct").textContent = money(o + r), { i: e, p: t, f: n, d: o, a: r, total: o + r } } function useCalc() { const e = calculate(); $("ei").value = e.i.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }), $("ep").value = e.p, $("ef").value = e.f, closeM("calc"), openEntry() } async function save() { const e = parseMoney($("ei").value); if (e <= 0) return toast("Informe uma renda válida."); const t = +$("ep").value || 0, n = +$("ef").value || 0, o = e * t / 100, r = e * n / 100, a = { userId: user.id, date: $("ed").value, church: $("ec").value.trim() || "Igreja Local", income: e, tithePercent: t, firstPercent: n, tithe: o, first: r, total: o + r, createdAt: (new Date).toISOString() }; try { await add("contributions", a); closeM("entry"); generatePrayer(a); $("prayer").classList.remove("hidden"); requestAnimationFrame(() => { $("prayer").style.display = "grid" }); await load() } catch (err) { console.error(err); generatePrayer(a); $("prayer").classList.remove("hidden"); $("prayer").style.display = "grid"; toast("Contribuição registrada. A oração foi aberta.") } } function generatePrayer(data) {
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   ROTANDARO — SUPABASE / MULTIUSUÁRIO
+   Configure SUPABASE_URL e SUPABASE_ANON_KEY abaixo.
+   ============================================================ */
+const SUPABASE_URL = "https://kkjbfrfcplgcrnuxhsqg.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_9whUfdsvDkTsg11OTzbSkg_nhK1nQQ0";
+
+let supabaseClient = null;
+let user = null, records = [], registering = false;
+
+const $ = e => document.getElementById(e);
+const money = e => Number(e || 0).toLocaleString("pt-BR", {
+  style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2
+});
+function parseMoney(e) {
+  return (e = String(e || "").trim().replace(/\s/g, "")) ?
+    (e.includes(",") && (e = e.replace(/\./g, "").replace(",", ".")), Number(e) || 0) : 0;
+}
+function formatBlur(e) {
+  const t = parseMoney(e.value);
+  e.value = t ? t.toLocaleString("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:2}) : "";
+}
+function esc(e) {
+  return String(e ?? "").replace(/[&<>"']/g, e => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[e]));
+}
+function dateBR(e) { return e.split("-").reverse().join("/"); }
+function toast(e) {
+  const t = $("toast"); t.textContent = e; t.style.opacity = 1;
+  clearTimeout(window.to); window.to = setTimeout(() => t.style.opacity = 0, 2200);
+}
+
+function configured() {
+  return SUPABASE_URL.startsWith("https://") &&
+         !SUPABASE_URL.includes("COLE_AQUI") &&
+         SUPABASE_ANON_KEY.length > 30 &&
+         !SUPABASE_ANON_KEY.includes("COLE_AQUI");
+}
+
+function setupClient() {
+  if (!configured()) return false;
+  if (!window.supabase) throw new Error("Biblioteca do Supabase não carregou.");
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return true;
+}
+
+function showConfigMessage() {
+  $("notice").classList.remove("hidden");
+  $("notice").innerHTML =
+    "<b>Banco online ainda não configurado.</b><br>" +
+    "Abra o arquivo e preencha SUPABASE_URL e SUPABASE_ANON_KEY no início do JavaScript.";
+}
+
+async function getAll(store) {
+  if (store === "contributions") {
+    const {data, error} = await supabaseClient
+      .from("contributions")
+      .select("*")
+      .order("date", {ascending:false})
+      .order("created_at", {ascending:false});
+    if (error) throw error;
+    return (data || []).map(r => ({
+      id:r.id, userId:r.user_id, date:r.date, church:r.church,
+      income:Number(r.income), tithePercent:Number(r.tithe_percent),
+      firstPercent:Number(r.first_percent), tithe:Number(r.tithe),
+      first:Number(r.first), total:Number(r.total), createdAt:r.created_at
+    }));
+  }
+  return [];
+}
+
+async function add(store, item) {
+  if (store !== "contributions") throw new Error("Operação inválida.");
+  const payload = {
+    user_id: user.id,
+    date: item.date,
+    church: item.church,
+    income: item.income,
+    tithe_percent: item.tithePercent,
+    first_percent: item.firstPercent,
+    tithe: item.tithe,
+    first: item.first,
+    total: item.total
+  };
+  const {data, error} = await supabaseClient
+    .from("contributions").insert(payload).select().single();
+  if (error) throw error;
+  return data.id;
+}
+
+async function del(store, id) {
+  if (store !== "contributions") throw new Error("Operação inválida.");
+  const {error} = await supabaseClient
+    .from("contributions").delete().eq("id", id).eq("user_id", user.id);
+  if (error) throw error;
+}
+
+async function clearStore(store, uid) {
+  if (store !== "contributions") return;
+  const {error} = await supabaseClient.from("contributions").delete().eq("user_id", uid);
+  if (error) throw error;
+}
+
+async function init() {
+  try {
+    if (!setupClient()) {
+      showConfigMessage();
+      registering = true;
+      $("loginBtn").textContent = "Criar conta";
+      return;
+    }
+
+    const {data:{session}} = await supabaseClient.auth.getSession();
+    if (session?.user) {
+      user = { id: session.user.id, username: session.user.user_metadata?.username || session.user.email };
+    }
+  } catch (e) {
+    console.error(e);
+    $("loginErr").textContent = "Não foi possível iniciar o banco online.";
+  }
+}
+
+function toggleReg() {
+  registering = !registering;
+  $("loginBtn").textContent = registering ? "Criar conta" : "Entrar";
+  $("regBtn").textContent = registering ? "Voltar ao login" : "Criar conta";
+  $("notice").classList.toggle("hidden", !registering && configured());
+  $("loginErr").textContent = "";
+}
+
+async function login() {
+  const identifier = $("lu").value.trim();
+  const password = $("lp").value;
+
+  if (!configured()) {
+    $("loginErr").textContent = "Configure o Supabase no arquivo antes de usar o login.";
+    return;
+  }
+  if (identifier.length < 3 || password.length < 6) {
+    $("loginErr").textContent = "Usuário/e-mail mínimo 3 caracteres e senha mínima 6.";
+    return;
+  }
+
+  $("loginErr").textContent = "Aguarde...";
+  try {
+    if (registering) {
+      // O campo "USUÁRIO" aceita e-mail. O nome digitado fica salvo no perfil.
+      if (!identifier.includes("@")) {
+        $("loginErr").textContent = "Para criar a conta, informe um e-mail válido no campo usuário.";
+        return;
+      }
+      const {data, error} = await supabaseClient.auth.signUp({
+        email: identifier,
+        password,
+        options: {data:{username:identifier.split("@")[0]}}
+      });
+      if (error) throw error;
+
+      if (!data.session) {
+        $("loginErr").textContent =
+          "Conta criada. Se a confirmação de e-mail estiver ativa no Supabase, confirme seu e-mail e depois entre.";
+        return;
+      }
+      user = {id:data.user.id, username:data.user.user_metadata?.username || identifier};
+    } else {
+      const {data, error} = await supabaseClient.auth.signInWithPassword({
+        email: identifier, password
+      });
+      if (error) throw error;
+      user = {id:data.user.id, username:data.user.user_metadata?.username || identifier};
+    }
+
+    await show();
+  } catch (e) {
+    console.error(e);
+    $("loginErr").textContent = e.message || "Usuário ou senha incorretos.";
+  }
+}
+
+async function auto() {
+  if (!configured()) {
+    $("login").classList.remove("hidden");
+    return;
+  }
+  const {data:{session}} = await supabaseClient.auth.getSession();
+  if (session?.user) {
+    user = {
+      id:session.user.id,
+      username:session.user.user_metadata?.username || session.user.email
+    };
+    await show();
+  } else {
+    $("login").classList.remove("hidden");
+  }
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    if (!session) {
+      user = null;
+      $("app").classList.add("hidden");
+      $("login").classList.remove("hidden");
+    }
+  });
+}
+
+async function show() {
+  $("login").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("uname").textContent = user.username;
+  await load();
+}
+
+async function logout() {
+  if (supabaseClient) await supabaseClient.auth.signOut();
+  user = null;
+  location.reload();
+}
+
+async function load() {
+  const e = await getAll("contributions");
+  records = e.filter(e => e.userId === user.id)
+    .sort((a,b) => b.date.localeCompare(a.date) || String(b.id).localeCompare(String(a.id)));
+  populate();
+  render();
+}
+
+function page(e, t) { document.querySelectorAll(".nav button").forEach((e => e.classList.remove("active"))), t.classList.add("active"), document.querySelectorAll(".page").forEach((e => e.classList.remove("active"))), $(e).classList.add("active"), "reports" === e && reports() } function openCalc() { $("calc").classList.remove("hidden"), calculate() } function openEntry() { $("entry").classList.remove("hidden"), $("ed").value = (new Date).toISOString().slice(0, 10) } function closeM(e) { $(e).classList.add("hidden") } function calculate() { const e = parseMoney($("ci").value), t = +$("cp").value || 0, n = +$("cf").value || 0, o = e * t / 100, r = e * n / 100; return $("cd").textContent = money(o), $("cfv").textContent = money(r), $("ct").textContent = money(o + r), { i: e, p: t, f: n, d: o, a: r, total: o + r } } function useCalc() { const e = calculate(); $("ei").value = e.i.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }), $("ep").value = e.p, $("ef").value = e.f, closeM("calc"), openEntry() } async function save() { const e = parseMoney($("ei").value); if (e <= 0) return toast("Informe uma renda válida."); const t = +$("ep").value || 0, n = +$("ef").value || 0, o = e * t / 100, r = e * n / 100, a = { userId: user.id, date: $("ed").value, church: $("ec").value.trim() || "Igreja Local", income: e, tithePercent: t, firstPercent: n, tithe: o, first: r, total: o + r, createdAt: (new Date).toISOString() }; try { await add("contributions", a); closeM("entry"); generatePrayer(a); $("prayer").classList.remove("hidden"); requestAnimationFrame(() => { $("prayer").style.display = "grid" }); await load() } catch (err) { console.error(err); generatePrayer(a); $("prayer").classList.remove("hidden"); $("prayer").style.display = "grid"; toast("Contribuição registrada. A oração foi aberta.") } } function generatePrayer(data) {
       const e = data || window.lastPrayerData || null;
       if (!e) return;
       window.lastPrayerData = e;
