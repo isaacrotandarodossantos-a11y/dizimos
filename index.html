@@ -676,7 +676,44 @@
         padding: 30px 18px
       }
     }
-  </style>
+  
+/* ============================================================
+   ROTANDARO — AJUSTES RESPONSIVOS PARA CELULAR
+   ============================================================ */
+@media (max-width: 700px) {
+  body { font-size: 15px; }
+  .wrap { width: 100%; padding: 14px 12px 28px; }
+  header { padding: 14px 0 10px; }
+  header h1, h1 { font-size: clamp(28px, 8vw, 42px) !important; line-height: 1.05; }
+  header p, .sub { line-height: 1.55; }
+  .nav { display:flex; overflow-x:auto; gap:7px; padding-bottom:7px; scrollbar-width:none; }
+  .nav::-webkit-scrollbar { display:none; }
+  .nav button { flex:0 0 auto; min-height:42px; padding:10px 12px; font-size:13px; }
+  .grid, .grid.profile, .calcgrid { grid-template-columns:1fr !important; }
+  .cards, .stats { grid-template-columns:1fr 1fr !important; gap:10px; }
+  .card { border-radius:16px; }
+  .pad { padding:16px !important; }
+  .fields { gap:12px; }
+  .input, input, select, button { min-height:46px; box-sizing:border-box; }
+  .btn { width:auto; min-height:44px; padding:11px 14px; }
+  .modal { padding:10px; align-items:flex-end; }
+  .modalbox { width:100%; max-height:92vh; overflow:auto; border-radius:20px 20px 12px 12px; padding:18px; }
+  .modalhead h2 { font-size:24px !important; }
+  table { display:block; width:100%; overflow-x:auto; white-space:nowrap; }
+  .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .profile h2 { font-size:24px !important; }
+  .footer { padding-bottom:20px; }
+}
+
+@media (max-width: 430px) {
+  .wrap { padding-left:9px; padding-right:9px; }
+  .cards, .stats { grid-template-columns:1fr !important; }
+  .nav button { font-size:12px; padding:9px 10px; }
+  .btn.main, #loginBtn, #regBtn { width:100%; }
+  .loginbox, .login-card { padding:20px 16px !important; }
+}
+
+</style>
   <style id=premium-blue-saas>
     :root {
       --navy: #071426;
@@ -2095,8 +2132,8 @@
       <p class=sub>Banco de dados online seguro · vários usuários · acesso de qualquer dispositivo.</p>
       <div id=notice class="notice hidden"></div>
       <div class=fields style=margin-top:18px>
-        <div class=field><label>USUÁRIO</label><input id=lu class=input></div>
-        <div class=field><label>SENHA</label><input id=lp class=input type=password></div><button id=loginBtn
+        <div class=field><label>E-MAIL</label><input id=lu class=input type=email autocomplete=username placeholder="seuemail@exemplo.com"></div>
+        <div class=field><label>SENHA</label><input id=lp class=input type=password autocomplete=current-password></div><button id=loginBtn
           class="btn main" onclick=login()>Entrar</button><button id=regBtn class=btn onclick=toggleReg()>Criar
           conta</button>
         <div id=loginErr class=error></div>
@@ -2623,12 +2660,24 @@ async function login() {
       });
       if (error) throw error;
 
-      if (!data.session) {
-        $("loginErr").textContent =
-          "Conta criada. Se a confirmação de e-mail estiver ativa no Supabase, confirme seu e-mail e depois entre.";
-        return;
+      // Após cadastrar, sempre volta para a tela de LOGIN.
+      // Isso deixa o fluxo mais claro para novos usuários.
+      if (data.session) {
+        await supabaseClient.auth.signOut();
       }
-      user = {id:data.user.id, username:data.user.user_metadata?.username || identifier};
+      registering = false;
+      $("loginBtn").textContent = "Entrar";
+      $("regBtn").textContent = "Criar conta";
+      $("lu").value = identifier;
+      $("lp").value = "";
+      $("notice").classList.remove("hidden");
+      $("notice").innerHTML =
+        "<b>Conta criada com sucesso!</b><br>" +
+        (data.session
+          ? "Agora faça login com seu e-mail e senha."
+          : "Se o Supabase solicitar confirmação, confirme seu e-mail. Depois faça login.");
+      $("loginErr").textContent = "";
+      return;
     } else {
       const {data, error} = await supabaseClient.auth.signInWithPassword({
         email: identifier, password
