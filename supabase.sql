@@ -17,6 +17,9 @@ create table if not exists public.contributions (
   first_percent numeric(6,2) not null default 0,
   tithe numeric(14,2) not null default 0,
   first numeric(14,2) not null default 0,
+  donation_percent numeric(6,2) not null default 2.5,
+  donation_institution text not null default 'Instituição',
+  donation numeric(14,2) not null default 0,
   total numeric(14,2) not null default 0,
   created_at timestamptz not null default now()
 );
@@ -98,3 +101,9 @@ for each row execute procedure public.handle_new_user();
 -- Opcional: se você quiser permitir cadastro sem confirmação de e-mail,
 -- no painel Supabase vá em Authentication > Providers > Email
 -- e desative "Confirm email".
+
+
+-- Atualização para instalações existentes:
+alter table public.contributions add column if not exists donation_percent numeric(6,2) not null default 2.5;
+alter table public.contributions add column if not exists donation_institution text not null default 'Instituição';
+alter table public.contributions add column if not exists donation numeric(14,2) not null default 0;
